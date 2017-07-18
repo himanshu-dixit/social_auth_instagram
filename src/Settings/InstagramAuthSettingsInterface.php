@@ -13,7 +13,7 @@ interface InstagramAuthSettingsInterface {
    * @return mixed
    *   The application ID.
    */
-  public function getAppId();
+  public function getClientId();
 
   /**
    * Gets the application secret.
@@ -21,7 +21,6 @@ interface InstagramAuthSettingsInterface {
    * @return string
    *   The application secret.
    */
-  public function getAppSecret();
-
+  public function getClientSecret();
 
 }

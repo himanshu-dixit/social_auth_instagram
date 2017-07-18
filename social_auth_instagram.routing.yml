@@ -7,10 +7,10 @@ social_auth_instagram.redirect_to_instagram:
   options:
     no_cache: TRUE
 
-social_auth_instagram.return_from_instagram:
+social_auth_instagram.callback:
   path: 'user/login/instagram/callback'
   defaults:
-    _controller: '\Drupal\social_auth_instagram\Controller\InstagramAuthController::returnFromInstagram'
+    _controller: '\Drupal\social_auth_instagram\Controller\InstagramAuthController::callback'
   requirements:
     _role: 'anonymous'
   options:

@@ -5,7 +5,7 @@ namespace Drupal\social_auth_instagram\Settings;
 use Drupal\social_api\Settings\SettingsBase;
 
 /**
- * Defines methods to get Social Auth Facebook app settings.
+ * Defines methods to get Social Auth Instagram settings.
  */
 class InstagramAuthSettings extends SettingsBase implements InstagramAuthSettingsInterface {
 
@@ -14,14 +14,14 @@ class InstagramAuthSettings extends SettingsBase implements InstagramAuthSetting
    *
    * @var string
    */
-  protected $appId;
+  protected $clientId;
 
   /**
    * Application secret.
    *
    * @var string
    */
-  protected $appSecret;
+  protected $clientSecret;
 
 
   /**
@@ -41,21 +41,21 @@ class InstagramAuthSettings extends SettingsBase implements InstagramAuthSetting
   /**
    * {@inheritdoc}
    */
-  public function getAppId() {
-    if (!$this->appId) {
-      $this->appId = $this->config->get('app_id');
+  public function getClientId() {
+    if (!$this->clientId) {
+      $this->clientId = $this->config->get('client_id');
     }
-    return $this->appId;
+    return $this->clientId;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function getAppSecret() {
-    if (!$this->appSecret) {
-      $this->appSecret = $this->config->get('app_secret');
+  public function getClientSecret() {
+    if (!$this->clientSecret) {
+      $this->clientSecret = $this->config->get('client_secret');
     }
-    return $this->appSecret;
+    return $this->clientSecret;
   }
 
 

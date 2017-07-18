@@ -78,7 +78,7 @@ class InstagramAuthSettingsForm extends SocialAuthSettingsForm {
 
     $form['instagram_settings'] = [
       '#type' => 'details',
-      '#title' => $this->t('Instagram App settings'),
+      '#title' => $this->t('Instagram Client settings'),
       '#open' => TRUE,
       '#description' => $this->t('You need to first create a Instagram App at <a href="@instagram-dev">@instagram-dev</a>', ['@instagram-dev' => 'https://developers.instagram.com/apps']),
     ];
@@ -86,17 +86,17 @@ class InstagramAuthSettingsForm extends SocialAuthSettingsForm {
     $form['instagram_settings']['client_id'] = [
       '#type' => 'textfield',
       '#required' => TRUE,
-      '#title' => $this->t('Application ID'),
-      '#default_value' => $config->get('app_id'),
-      '#description' => $this->t('Copy the App ID of your Instagram App here. This value can be found from your App Dashboard.'),
+      '#title' => $this->t('Client ID'),
+      '#default_value' => $config->get('client_id'),
+      '#description' => $this->t('Copy the Client ID of your Instagram App here. This value can be found from your App Dashboard.'),
     ];
 
-    $form['instagram_settings']['app_secret'] = [
+    $form['instagram_settings']['client_secret'] = [
       '#type' => 'textfield',
       '#required' => TRUE,
-      '#title' => $this->t('App Secret'),
-      '#default_value' => $config->get('app_secret'),
-      '#description' => $this->t('Copy the App Secret of your Instagram App here. This value can be found from your App Dashboard.'),
+      '#title' => $this->t('Client Secret'),
+      '#default_value' => $config->get('client_secret'),
+      '#description' => $this->t('Copy the Client Secret of your Instagram App here. This value can be found from your App Dashboard.'),
     ];
 
 
@@ -107,20 +107,12 @@ class InstagramAuthSettingsForm extends SocialAuthSettingsForm {
       '#description' => $this->t('Define the data point to be stored in database, data points must be separated by comma.'),
     ];
 
-    $form['instagram_settings']['oauth_redirect_url'] = [
+    $form['instagram_settings']['redirect_url'] = [
       '#type' => 'textfield',
       '#disabled' => TRUE,
-      '#title' => $this->t('Valid OAuth redirect URIs'),
+      '#title' => $this->t('Valid redirect URIs'),
       '#description' => $this->t('Copy this value to <em>Valid OAuth redirect URIs</em> field of your Instagram App settings.'),
       '#default_value' => $GLOBALS['base_url'] . '/user/login/instagram/callback',
-    ];
-
-    $form['instagram_settings']['app_domains'] = [
-      '#type' => 'textfield',
-      '#disabled' => TRUE,
-      '#title' => $this->t('App Domains'),
-      '#description' => $this->t('Copy this value to <em>App Domains</em> field of your Instagram App settings.'),
-      '#default_value' => $this->requestContext->getHost(),
     ];
 
     $form['instagram_settings']['site_url'] = [
@@ -142,8 +134,8 @@ class InstagramAuthSettingsForm extends SocialAuthSettingsForm {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $values = $form_state->getValues();
     $this->config('social_auth_instagram.settings')
-      ->set('app_id', $values['app_id'])
-      ->set('app_secret', $values['app_secret'])
+      ->set('client_id', $values['client_id'])
+      ->set('client_secret', $values['client_secret'])
       ->set('data_points', $values['data_points'])
       ->save();
 

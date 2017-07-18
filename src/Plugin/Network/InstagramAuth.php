@@ -5,17 +5,17 @@ namespace Drupal\social_auth_instagram\Plugin\Network;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
-use Drupal\social_auth_instagram\InstagramAuthPersistentDataHandler;
+use Drupal\social_auth\SocialAuthDataHandler;
 use Drupal\social_api\Plugin\NetworkBase;
 use Drupal\social_api\SocialApiException;
-use Drupal\social_auth_instagram\Settings\InstgramAuthSettings;
+use Drupal\social_auth_instagram\Settings\InstagramAuthSettings;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use League\OAuth2\Client\Provider\Instagram;
 
 /**
  * Defines a Network Plugin for Social Auth Instagram.
  *
- * @package Drupal\simple_fb_connect\Plugin\Network
+ * @package Drupal\simple_ingtagram_connect\Plugin\Network
  *
  * @Network(
  *   id = "social_auth_instagram",
@@ -32,11 +32,11 @@ use League\OAuth2\Client\Provider\Instagram;
 class InstagramAuth extends NetworkBase implements InstagramAuthInterface {
 
   /**
-   * The Instagram Persistent Data Handler.
+   * The Social Auth Persistent Data Handler.
    *
-   * @var \Drupal\social_auth_instagram\InstagramAuthPersistentDataHandler
+   * @var \Drupal\social_auth\SocialAuthDataHandler
    */
-  protected $persistentDataHandler;
+  protected $dataHandler;
 
   /**
    * The logger factory.
@@ -50,7 +50,7 @@ class InstagramAuth extends NetworkBase implements InstagramAuthInterface {
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     return new static(
-      $container->get('social_auth_instagram.persistent_data_handler'),
+      $container->get('social_auth.social_auth_data_handler'),
       $configuration,
       $plugin_id,
       $plugin_definition,
@@ -63,8 +63,8 @@ class InstagramAuth extends NetworkBase implements InstagramAuthInterface {
   /**
    * InstagramAuth constructor.
    *
-   * @param \Drupal\social_auth_instagram\InstagramAuthPersistentDataHandler $persistent_data_handler
-   *   The persistent data handler.
+   * @param \Drupal\social_auth\SocialAuthDataHandler $social_auth_data_handler
+   *   The data handler.
    * @param array $configuration
    *   A configuration array containing information about the plugin instance.
    * @param string $plugin_id
@@ -78,7 +78,7 @@ class InstagramAuth extends NetworkBase implements InstagramAuthInterface {
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
    *   The logger factory.
    */
-  public function __construct(InstagramAuthPersistentDataHandler $persistent_data_handler,
+  public function __construct(SocialAuthDataHandler $data_handler,
                               array $configuration,
                               $plugin_id,
                               array $plugin_definition,
@@ -88,14 +88,14 @@ class InstagramAuth extends NetworkBase implements InstagramAuthInterface {
 
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $config_factory);
 
-    $this->persistentDataHandler = $persistent_data_handler;
+    $this->dataHandler = $data_handler;
     $this->loggerFactory = $logger_factory;
   }
 
   /**
    * Sets the underlying SDK library.
    *
-   * @return \Instagram\Instagram
+   * @return \League\OAuth2\Client\Provider\Instagram
    *   The initialized 3rd party library instance.
    *
    * @throws SocialApiException
@@ -113,9 +113,10 @@ class InstagramAuth extends NetworkBase implements InstagramAuthInterface {
     if ($this->validateConfig($settings)) {
       // All these settings are mandatory.
       $league_settings = [
-        'clientId'          => $settings->getAppId(),
-        'clientSecret'      => $settings->getAppSecret(),
-        'redirectUri'       => $GLOBALS['base_url'] . '/user/login/instagram/callback'
+        'clientId'          => $settings->getClientId(),
+        'clientSecret'      => $settings->getClientSecret(),
+        'redirectUri'       => $GLOBALS['base_url'] . '/user/login/instagram/callback',
+        'host'              => 'https://api.instagram.com'
       ];
 
       return new Instagram($league_settings);
@@ -134,12 +135,12 @@ class InstagramAuth extends NetworkBase implements InstagramAuthInterface {
    *   False otherwise.
    */
   protected function validateConfig(InstagramAuthSettings $settings) {
-    $app_id = $settings->getAppId();
-
-    if (!$app_id || !$app_secret ) {
+    $client_id = $settings->getClientId();
+    $client_secret = $settings->getClientSecret();
+    if (!$client_id || !$client_secret ) {
       $this->loggerFactory
         ->get('social_auth_instagram')
-        ->error('Define App ID and App Secret on module settings.');
+        ->error('Define Client ID and Client Secret on module settings.');
       return FALSE;
     }
 

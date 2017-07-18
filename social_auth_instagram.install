@@ -11,8 +11,8 @@ use Drupal\social_auth\Controller\SocialAuthController;
 /**
  * Implements hook_requirements().
  *
- * Checks that a compatible version of oAuth2 Facebook library for the
- * leagueoAuthclient with Composer. Check installation instructions
+ * Checks that a compatible version of oAuth2 Instagram library for the
+ * leagueOAuth2 client with Composer. Check installation instructions
  * from the README.txt.
  */
 function social_auth_instagram_requirements($phase) {

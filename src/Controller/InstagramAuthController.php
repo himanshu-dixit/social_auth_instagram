@@ -9,12 +9,12 @@ use Drupal\social_auth_instagram\InstagramAuthManager;
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Routing\TrustedRedirectResponse;
-use Drupal\social_auth_instagram\InstagramAuthPersistentDataHandler;
+use Drupal\social_auth\SocialAuthDataHandler;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 
 /**
- * Returns responses for Simple FB Connect module routes.
+ * Returns responses for Simple Instagram Connect module routes.
  */
 class InstagramAuthController extends ControllerBase {
 
@@ -33,9 +33,9 @@ class InstagramAuthController extends ControllerBase {
   private $userManager;
 
   /**
-   * The Facebook authentication manager.
+   * The Instagram authentication manager.
    *
-   * @var \Drupal\social_auth_facebook\FacebookAuthManager
+   * @var \Drupal\social_auth_facebook\InstagramAuthManager
    */
   private $instagramManager;
 
@@ -47,11 +47,11 @@ class InstagramAuthController extends ControllerBase {
   private $request;
 
   /**
-   * The Facebook Persistent Data Handler.
+   * The Instagram Persistent Data Handler.
    *
-   * @var \Drupal\social_auth_facebook\FacebookAuthPersistentDataHandler
+   * @var \Drupal\social_auth\SocialAuthDataHandler
    */
-  private $persistentDataHandler;
+  private $dataHandler;
 
   /**
    * The data point to be collected.
@@ -71,25 +71,25 @@ class InstagramAuthController extends ControllerBase {
    * InstagramAuthController constructor.
    *
    * @param \Drupal\social_api\Plugin\NetworkManager $network_manager
-   *   Used to get an instance of social_auth_facebook network plugin.
+   *   Used to get an instance of social_auth_instagram network plugin.
    * @param \Drupal\social_auth\SocialAuthUserManager $user_manager
    *   Manages user login/registration.
-   * @param \Drupal\social_auth_facebook\FacebookAuthManager $facebook_manager
+   * @param \Drupal\social_auth_facebook\InstagramAuthManager $instagram_manager
    *   Used to manage authentication methods.
    * @param \Symfony\Component\HttpFoundation\RequestStack $request
    *   Used to access GET parameters.
-   * @param \Drupal\social_auth_facebook\FacebookAuthPersistentDataHandler $persistent_data_handler
-   *   FacebookAuthPersistentDataHandler object.
+   * @param \Drupal\social_auth\SocialAuthDataHandler $social_auth_data_handler
+   *   SocialAUthDataHandler object.
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
    *   Used for logging errors.
    */
-  public function __construct(NetworkManager $network_manager, SocialAuthUserManager $user_manager, InstagramAuthManager $instagram_manager, RequestStack $request, InstagramAuthPersistentDataHandler $persistent_data_handler, LoggerChannelFactoryInterface $logger_factory) {
+  public function __construct(NetworkManager $network_manager, SocialAuthUserManager $user_manager, InstagramAuthManager $instagram_manager, RequestStack $request, SocialAuthDataHandler $social_auth_data_handler, LoggerChannelFactoryInterface $logger_factory) {
 
     $this->networkManager = $network_manager;
     $this->userManager = $user_manager;
     $this->instagramManager = $instagram_manager;
     $this->request = $request;
-    $this->persistentDataHandler = $persistent_data_handler;
+    $this->dataHandler = $social_auth_data_handler;
     $this->loggerFactory = $logger_factory;
 
     // Sets the plugin id.
@@ -97,7 +97,7 @@ class InstagramAuthController extends ControllerBase {
 
     // Sets the session keys to nullify if user could not logged in.
     $this->userManager->setSessionKeysToNullify([
-      $this->persistentDataHandler->getSessionPrefix() . 'access_token',
+      $this->dataHandler->getSessionPrefix() . 'access_token',
     ]);
     $this->setting = $this->config('social_auth_instagram.settings');
   }
@@ -111,7 +111,7 @@ class InstagramAuthController extends ControllerBase {
       $container->get('social_auth.user_manager'),
       $container->get('social_auth_instagram.manager'),
       $container->get('request_stack'),
-      $container->get('social_auth_instagram.persistent_data_handler'),
+      $container->get('social_auth.social_auth_data_handler'),
       $container->get('logger.factory')
     );
   }
@@ -134,14 +134,16 @@ class InstagramAuthController extends ControllerBase {
     // Instagram service was returned, inject it to $instagramManager.
     $this->instagramManager->setClient($instagram);
 
+    $data_points = explode(',', $this->getDataPoints());
+
     // Generates the URL where the user will be redirected for Instagram login.
     // If the user did not have email permission granted on previous attempt,
     // we use the re-request URL requesting only the email address.
-    $instagram_login_url = $this->instagramManager->getInstagramLoginUrl();
+    $instagram_login_url = $this->instagramManager->getInstagramLoginUrl($data_points);
 
     $state = $this->instagramManager->getState();
 
-    $this->persistentDataHandler->set('oAuth2State', $state);
+    $this->dataHandler->set('oAuth2State', $state);
 
     return new TrustedRedirectResponse($instagram_login_url);
   }
@@ -151,7 +153,7 @@ class InstagramAuthController extends ControllerBase {
    *
    * Instagram returns the user here after user has authenticated in Instagram.
    */
-  public function returnFromInstagram() {
+  public function callback() {
     // Checks if user cancel login via Instagram.
     $error = $this->request->getCurrentRequest()->get('error');
     if ($error == 'access_denied') {
@@ -168,25 +170,19 @@ class InstagramAuthController extends ControllerBase {
       return $this->redirect('user.login');
     }
 
-    $state = $this->persistentDataHandler->get('oAuth2State');
+    $state = $this->dataHandler->get('oAuth2State');
 
     if (empty($_GET['state']) || ($_GET['state'] !== $state)) {
-      unset($_SESSION['oauth2state']);
+      $this->userManager->setSessionKeysToNullify(['oauth2state']);
       drupal_set_message($this->t('Instagram login failed. Unvalid oAuth2 State.'), 'error');
       return $this->redirect('user.login');
     }
 
     $this->instagramManager->setClient($instagram)->authenticate();
 
-    // Gets user's FB profile from Instagram API.
+    // Gets user's info from Instagram API.
     if (!$instagram_profile = $this->instagramManager->getUserInfo()) {
       drupal_set_message($this->t('Instagram login failed, could not load Instagram profile. Contact site administrator.'), 'error');
-      return $this->redirect('user.login');
-    }
-
-    // Gets user's email from the FB profile.
-    if (!$email = $this->instagramManager->getUserInfo()->getEmail()) {
-      drupal_set_message($this->t('Instagram login failed. This site requires permission to get your email address.'), 'error');
       return $this->redirect('user.login');
     }
 
@@ -196,22 +192,15 @@ class InstagramAuthController extends ControllerBase {
 
     foreach ($data_points as $data_point) {
       switch ($data_point) {
-        case 'email': $data['email'] = $instagram_profile->getEmail();
-          break;
-
-        case 'name': $data['name'] = $instagram_profile->getName();
-          break;
-
-        default: $this->loggerFactory->get($this->userManager->setPluginId())->error(
+        default: $this->loggerFactory->get($this->userManager->getPluginId())->error(
           'Failed to fetch Data Point. Invalid Data Point: @$data_point', ['@$data_point' => $data_point]);
       }
     }
 
     // Saves access token to session.
-    $this->persistentDataHandler->set('access_token', $this->instagramManager->getAccessToken());
-
+    $this->dataHandler->set('access_token', $this->instagramManager->getAccessToken());
     // If user information could be retrieved.
-    return $this->userManager->authenticateUser($instagram_profile->getName(), $email, 'social_auth_instagram', $instagram_profile->getId(), $instagram_profile->getPictureUrl(), json_encode($data));
+    return $this->userManager->authenticateUser($instagram_profile->getName(), '', 'social_auth_instagram', $instagram_profile->getId(), $instagram_profile->getImageurl(), json_encode($data));
   }
 
   /**
